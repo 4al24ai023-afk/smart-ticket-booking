@@ -1,0 +1,106 @@
+{
+  "project": "SMARTTICKET - PS-07 Online Ticketing & Booking Management System",
+  "version": "1.0.0",
+  "entities": {
+    "users": {
+      "collection": "users",
+      "description": "User profiles with role-based access control (customer, admin, staff)",
+      "fields": {
+        "id": "string (matches Firebase Auth UID)",
+        "name": "string",
+        "email": "string",
+        "role": "'customer' | 'admin' | 'staff'",
+        "phone": "string",
+        "avatarUrl": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "events": {
+      "collection": "events",
+      "description": "Event listings with multi-tier ticketing and live capacity tracking",
+      "fields": {
+        "id": "string",
+        "title": "string",
+        "subtitle": "string",
+        "category": "string ('Concerts' | 'Tech & Hackathons' | 'Sports' | 'Workshops' | 'College Events' | 'Film & Arts' | 'Comedy')",
+        "description": "string",
+        "venue": "string",
+        "city": "string",
+        "date": "string (YYYY-MM-DD)",
+        "time": "string",
+        "bannerUrl": "string",
+        "organizer": "string",
+        "totalCapacity": "number",
+        "remainingCapacity": "number",
+        "tiers": "array of { id, name, price, description, totalCapacity, availableCapacity }",
+        "status": "'published' | 'draft' | 'cancelled' | 'sold_out'",
+        "tags": "array of strings"
+      }
+    },
+    "bookings": {
+      "collection": "bookings",
+      "description": "Transaction records linking customers to tickets and events",
+      "fields": {
+        "id": "string",
+        "bookingReference": "string (e.g. ST-2026-X8K9M2)",
+        "userId": "string",
+        "customerName": "string",
+        "customerEmail": "string",
+        "customerPhone": "string",
+        "eventId": "string",
+        "eventTitle": "string",
+        "eventDate": "string",
+        "eventTime": "string",
+        "eventVenue": "string",
+        "tierId": "string",
+        "tierName": "string",
+        "quantity": "number",
+        "unitPrice": "number",
+        "subtotal": "number",
+        "platformFee": "number",
+        "taxAmount": "number",
+        "totalAmount": "number",
+        "paymentMethod": "'demo_card' | 'demo_upi' | 'demo_wallet'",
+        "paymentReference": "string",
+        "paymentStatus": "'completed' | 'refunded' | 'failed'",
+        "bookingStatus": "'confirmed' | 'cancelled'",
+        "tickets": "array of Ticket references",
+        "createdAt": "timestamp",
+        "cancelledAt": "timestamp (optional)"
+      }
+    },
+    "tickets": {
+      "collection": "tickets",
+      "description": "Individual scannable digital passes generated per seat/person",
+      "fields": {
+        "id": "string",
+        "ticketNumber": "string (e.g. TK-8491-01)",
+        "bookingId": "string",
+        "bookingReference": "string",
+        "eventId": "string",
+        "eventTitle": "string",
+        "eventDate": "string",
+        "tierName": "string",
+        "attendeeName": "string",
+        "price": "number",
+        "qrToken": "string (tamper-proof cryptographic token STK:v1:...)",
+        "status": "'valid' | 'used' | 'cancelled'",
+        "usedAt": "timestamp (set when admitted)",
+        "usedByStaffId": "string",
+        "usedByStaffName": "string"
+      }
+    },
+    "staff_logs": {
+      "collection": "staff_logs",
+      "description": "Audit trail of all gate check-in attempts (successful, duplicates, invalid)",
+      "fields": {
+        "id": "string",
+        "ticketNumber": "string",
+        "bookingReference": "string",
+        "scannedAt": "timestamp",
+        "status": "'admitted' | 'duplicate_blocked' | 'cancelled_blocked' | 'invalid_token'",
+        "staffName": "string"
+      }
+    }
+  }
+}

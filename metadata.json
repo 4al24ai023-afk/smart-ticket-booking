@@ -1,0 +1,8 @@
+{
+  "name": "SMARTTICKET - Online Ticketing & Booking System",
+  "description": "Production-grade, hackathon-ready online ticketing and booking management system with real-time inventory, fraud-proof QR verification, unified Firestore backend, and native Android Flutter application.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

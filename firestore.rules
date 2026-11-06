@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Role-Based Access Control (RBAC)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserData().role == 'admin' || 
+        request.auth.token.admin == true
+      );
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        getUserData().role == 'staff' || 
+        getUserData().role == 'admin' ||
+        request.auth.token.staff == true
+      );
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && request.resource.data.role == resource.data.role; // Prevent self-elevation
+      allow delete: if isAdmin();
+    }
+
+    // 2. Events Collection
+    match /events/{eventId} {
+      // Anyone can read published events
+      allow read: if true;
+      // Only admins can create, update or delete events
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        // Allow transactional capacity decrement from secure backend cloud function or authenticated booking transaction
+        isSignedIn() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['remainingCapacity', 'tiers', 'status'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3. Bookings Collection
+    match /bookings/{bookingId} {
+      // Customers read their own bookings; Admins and Staff can read all
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isStaff());
+      // Create allowed for authenticated customers creating their own booking
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Update only allowed for admin, or owner requesting cancellation
+      allow update: if isAdmin() || (
+        isOwner(resource.data.userId) && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'cancelledAt', 'paymentStatus']) &&
+        resource.data.bookingStatus == 'confirmed' &&
+        request.resource.data.bookingStatus == 'cancelled'
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 4. Tickets Collection
+    match /tickets/{ticketId} {
+      // Attendee can read ticket; Staff can read for scanning
+      allow read: if isSignedIn() && (
+        isOwner(resource.data.attendeeEmail) || 
+        isStaff() || 
+        isAdmin()
+      );
+      // Backend/Cloud Function/Booking transaction creates tickets
+      allow create: if isSignedIn();
+      // Ticket status check-in: Staff can mark status from 'valid' to 'used' exactly once
+      allow update: if isStaff() && (
+        resource.data.status == 'valid' &&
+        request.resource.data.status == 'used' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'usedAt', 'usedByStaffId', 'usedByStaffName'])
+      ) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 5. Staff Check-In Audit Logs
+    match /staff_logs/{logId} {
+      allow read: if isStaff() || isAdmin();
+      allow create: if isStaff() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // 6. Payments Audit Collection
+    match /payments/{paymentId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+  }
+}
